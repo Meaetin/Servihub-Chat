@@ -39,6 +39,7 @@ model User {
   email     String?     @unique
   name      String?
   role      Role
+  password  String
 
   // Relations
   conversationsAsCustomer Conversation[] @relation("CustomerConversations")
