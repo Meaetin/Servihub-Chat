@@ -193,45 +193,45 @@ export class ConversationService {
     totalPages: number;
     currentPage: number;
   }> {
-    const skip = (page - 1) * limit;
+    const skip = (page - 1) * limit; // calculate the number of items to skip
 
-    const [conversations, totalCount] = await Promise.all([
-      this.prisma.conversation.findMany({
+    const [conversations, totalCount] = await Promise.all([ 
+      this.prisma.conversation.findMany({ // find all conversations
         where: {
           OR: [
-            { customerId: userId },
-            { businessId: userId }
+            { customerId: userId }, // find conversations where the customer is the user
+            { businessId: userId } // find conversations where the business is the user
           ]
         },
         include: {
           customer: {
-            select: { id: true, name: true, email: true }
+            select: { id: true, name: true, email: true } // select the id, name, and email of the customer
           },
           business: {
-            select: { id: true, name: true, email: true }
+            select: { id: true, name: true, email: true } // select the id, name, and email of the business
           },
           messages: {
-            orderBy: { createdAt: 'desc' },
-            take: 1,
+            orderBy: { createdAt: 'desc' }, // order by creation date in descending order
+            take: 1, // take the most recent message
             include: {
               sender: {
-                select: { id: true, name: true, role: true }
+                select: { id: true, name: true, role: true } // select the id, name, and role of the sender
               }
             }
           },
           _count: {
-            select: { messages: true }
+            select: { messages: true } // count the number of messages in the conversation
           }
         },
-        orderBy: { createdAt: 'desc' },
-        skip,
-        take: limit
+        orderBy: { createdAt: 'desc' }, // order by creation date in descending order
+        skip, // skip the number of items specified by the page and limit
+        take: limit // take the number of items specified by the limit
       }),
-      this.prisma.conversation.count({
+      this.prisma.conversation.count({ // count the number of conversations
         where: {
           OR: [
-            { customerId: userId },
-            { businessId: userId }
+            { customerId: userId }, // count conversations where the customer is the user
+            { businessId: userId } // count conversations where the business is the user
           ]
         }
       })
