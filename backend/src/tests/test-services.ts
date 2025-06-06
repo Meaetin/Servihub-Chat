@@ -1,5 +1,5 @@
 import { PrismaClient } from '@prisma/client';
-import { UserService, ConversationService, MessageService } from './services';
+import { UserService, ConversationService, MessageService } from '../services';
 
 const prisma = new PrismaClient();
 

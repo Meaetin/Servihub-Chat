@@ -1,5 +1,5 @@
 import { PrismaClient } from '@prisma/client';
-import { UserService, ConversationService, MessageService } from './services';
+import { UserService, ConversationService, MessageService } from '../services';
 import jwt from 'jsonwebtoken';
 import * as fs from 'fs';
 import * as path from 'path';
