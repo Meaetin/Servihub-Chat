@@ -7,6 +7,7 @@ import fastifyWebsocket from '@fastify/websocket';
 import cors from '@fastify/cors';
 import fastifyStatic from '@fastify/static';
 import path from 'path';
+import { webSocketManager } from './websocket/WebSocketManager';
 
 // Import services
 import { UserService, ConversationService, MessageService } from './services';
@@ -14,9 +15,6 @@ import type { CreateUserDTO } from './services';
 
 // Import plugins
 import { chatPlugin } from './plugins';
-
-// Import WebSocket Manager
-import { webSocketManager } from './websocket/WebSocketManager';
 
 // Initialize Fastify
 const fastify = Fastify({

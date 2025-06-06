@@ -15,7 +15,7 @@
     "test:chat-plugin": "ts-node src/test-chat-plugin.ts",
     "test:file-upload": "ts-node src/test-file-upload.ts",
     "test:websocket": "ts-node src/tests/test-websocket.ts",
-    "clean": "rm -rf dist",
+    "clean": "rimraf dist",
     "prebuild": "npm run clean",
     "postbuild": "echo \"Build completed successfully\"",
     "lint": "echo \"Linting not configured yet\"",

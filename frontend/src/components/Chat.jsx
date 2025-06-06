@@ -111,14 +111,31 @@ function Chat({ user }) {
               createdAt: data.data.createdAt || new Date().toISOString()
             }
             
-            // Prevent duplicates by checking if message already exists
             setMessages(prev => {
+              // If this is our own message, replace the optimistic one
+              if (newMsg.senderId === user.id) {
+                const optimisticIndex = prev.findIndex(msg => 
+                  msg.isOptimistic && 
+                  msg.body === newMsg.body && 
+                  msg.senderId === newMsg.senderId
+                )
+                
+                if (optimisticIndex !== -1) {
+                  // Replace optimistic message with real one
+                  const newMessages = [...prev]
+                  newMessages[optimisticIndex] = newMsg
+                  return newMessages
+                }
+              }
+              
+              // Prevent duplicates by checking if message already exists
               const exists = prev.some(msg => 
                 msg.id === newMsg.id || 
                 (msg.body === newMsg.body && 
                  msg.senderId === newMsg.senderId && 
                  Math.abs(new Date(msg.createdAt).getTime() - new Date(newMsg.createdAt).getTime()) < 1000)
               )
+              
               return exists ? prev : [...prev, newMsg]
             })
           }
@@ -170,10 +187,24 @@ function Chat({ user }) {
       contentType: 'TEXT'
     }
 
+    // Optimistically add message to UI immediately
+    const optimisticMessage = {
+      id: `temp-${Date.now()}-${Math.random()}`, // Temporary ID
+      body: newMessage,
+      senderId: user.id,
+      senderRole: user.role,
+      contentType: 'TEXT',
+      createdAt: new Date().toISOString(),
+      isOptimistic: true // Flag to identify optimistic messages
+    }
+
+    // Add message immediately to local state
+    setMessages(prev => [...prev, optimisticMessage])
+
+    // Send via WebSocket
     ws.send(JSON.stringify(message))
 
-    // Clear the input immediately but don't add optimistic update
-    // Message will be added when WebSocket confirms it
+    // Clear the input immediately
     setNewMessage('')
     stopTyping()
   }
