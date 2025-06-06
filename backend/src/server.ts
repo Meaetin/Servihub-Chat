@@ -5,10 +5,15 @@ import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
 import fastifyWebsocket from '@fastify/websocket';
 import cors from '@fastify/cors';
+import fastifyStatic from '@fastify/static';
+import path from 'path';
 
 // Import services
 import { UserService, ConversationService, MessageService } from './services';
 import type { CreateUserDTO } from './services';
+
+// Import plugins
+import { chatPlugin } from './plugins';
 
 // Initialize Fastify
 const fastify = Fastify({
@@ -20,6 +25,12 @@ fastify.register(cors, {
   origin: true,
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS']
+});
+
+// Register static file serving
+fastify.register(fastifyStatic, {
+  root: path.join(__dirname, '..', 'public'),
+  prefix: '/',
 });
 
 // Initialize Prisma and Services
@@ -141,6 +152,9 @@ function authenticateWebSocket(request: FastifyRequest): { user: any } | { error
 // Initialize WebSocket
 fastify.register(fastifyWebsocket);
 
+// Register chat plugin with API prefix
+fastify.register(chatPlugin, { prefix: '/api/chat' });
+
 fastify.register(async function (fastify) {
   // ==================== AUTHENTICATION ROUTES ====================
   
@@ -260,119 +274,10 @@ fastify.register(async function (fastify) {
     }
   });
 
-  // Get user conversations
-  fastify.get('/conversations', {
-    preHandler: [authMiddleware]
-  }, async (request: AuthenticatedRequest, reply) => {
-    try {
-      const { page = 1, limit = 20 } = request.query as { page?: number; limit?: number };
-      const conversations = await conversationService.findManyWithPagination(
-        request.user!.userId,
-        page,
-        limit
-      );
-      reply.send(conversations);
-    } catch (error) {
-      fastify.log.error(error);
-      reply.status(500).send({ error: 'Failed to fetch conversations' });
-    }
-  });
-
-  // Get messages for a conversation
-  fastify.get('/conversations/:conversationId/messages', {
-    preHandler: [authMiddleware]
-  }, async (request: AuthenticatedRequest, reply) => {
-    try {
-      const { conversationId } = request.params as { conversationId: string };
-      const { page = 1, limit = 50 } = request.query as { page?: number; limit?: number };
-
-      // Check if user is participant in conversation
-      const isParticipant = await conversationService.isUserParticipant(
-        conversationId,
-        request.user!.userId
-      );
-
-      if (!isParticipant) {
-        return reply.status(403).send({ error: 'Access denied to this conversation' });
-      }
-
-      const messages = await messageService.findByConversationId(conversationId, page, limit);
-      reply.send(messages);
-    } catch (error) {
-      fastify.log.error(error);
-      reply.status(500).send({ error: 'Failed to fetch messages' });
-    }
-  });
-
-  // Create a new conversation
-  fastify.post('/conversations', {
-    preHandler: [authMiddleware]
-  }, async (request: AuthenticatedRequest, reply) => {
-    try {
-      const { otherUserId } = request.body as { otherUserId: string };
-      const currentUserId = request.user!.userId;
-
-      // Determine customer and business roles
-      const currentUser = await userService.findById(currentUserId);
-      const otherUser = await userService.findById(otherUserId);
-
-      if (!currentUser || !otherUser) {
-        return reply.status(404).send({ error: 'User not found' });
-      }
-
-      // Create conversation with proper role assignment
-      const conversation = await conversationService.createConversation({
-        customerId: currentUser.role === 'CUSTOMER' ? currentUserId : otherUserId,
-        businessId: currentUser.role === 'AGENT' ? currentUserId : otherUserId
-      });
-
-      reply.send({ conversation });
-    } catch (error) {
-      fastify.log.error(error);
-      reply.status(500).send({ error: 'Failed to create conversation' });
-    }
-  });
-
-  // Send a message
-  fastify.post('/conversations/:conversationId/messages', {
-    preHandler: [authMiddleware]
-  }, async (request: AuthenticatedRequest, reply) => {
-    try {
-      const { conversationId } = request.params as { conversationId: string };
-      const { body, contentType = 'TEXT' } = request.body as { 
-        body: string; 
-        contentType?: 'TEXT' | 'IMAGE' | 'FILE' 
-      };
-
-      // Check if user is participant in conversation
-      const isParticipant = await conversationService.isUserParticipant(
-        conversationId,
-        request.user!.userId
-      );
-
-      if (!isParticipant) {
-        return reply.status(403).send({ error: 'Access denied to this conversation' });
-      }
-
-      const message = await messageService.createMessage({
-        conversationId,
-        senderId: request.user!.userId,
-        senderRole: request.user!.role,
-        contentType,
-        body
-      });
-
-      reply.send({ message });
-    } catch (error) {
-      fastify.log.error(error);
-      reply.status(500).send({ error: 'Failed to send message' });
-    }
-  });
-
   // ==================== PUBLIC ROUTES ====================
 
   // Root route
-  fastify.get('/', async (request, reply) => {
+  fastify.get('/api', async (request, reply) => {
     reply.send({ 
       message: 'ServiHub Chat API is running!',
       endpoints: {
@@ -381,14 +286,12 @@ fastify.register(async function (fastify) {
           login: 'POST /auth/login',
           profile: 'GET /auth/me (requires auth)'
         },
-        users: {
-          list: 'GET /users (agents only)'
-        },
-        conversations: {
-          list: 'GET /conversations (requires auth)',
-          create: 'POST /conversations (requires auth)',
-          messages: 'GET /conversations/:id/messages (requires auth)',
-          sendMessage: 'POST /conversations/:id/messages (requires auth)'
+        chat: {
+          conversations: 'GET /api/chat/conversations (requires auth)',
+          conversationMessages: 'GET /api/chat/conversations/:id/messages (requires auth)',
+          createConversation: 'POST /api/chat/conversations (requires auth)',
+          uploadFile: 'POST /api/chat/upload (requires auth)',
+          health: 'GET /api/chat/health (requires auth)'
         },
         websocket: 'ws://localhost:3001/ws?token=YOUR_JWT_TOKEN'
       }
