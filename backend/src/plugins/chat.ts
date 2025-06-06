@@ -1,12 +1,10 @@
 import { FastifyPluginAsync, FastifyRequest, FastifyReply } from 'fastify';
 import { PrismaClient } from '@prisma/client';
 import { ConversationService, MessageService, UserService } from '../services';
-import jwt from 'jsonwebtoken';
 import { createClient } from '@supabase/supabase-js';
+import jwt from 'jsonwebtoken';
 import getRawBody from 'raw-body';
 
-// Initialize Prisma
-const prisma = new PrismaClient();
 
 // Supabase client
 const supabase = createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
@@ -338,6 +336,15 @@ const chatPlugin: FastifyPluginAsync = async (fastify, options) => {
 
   // POST /upload - File upload endpoint
   fastify.post('/upload', {
+    schema: {
+      querystring: {
+        type: 'object',
+        required: ['conversationId'],
+        properties: {
+          conversationId: { type: 'string', format: 'uuid' }
+        }
+      }
+    },
     handler: async (request: AuthenticatedRequest, reply: FastifyReply) => { // upload a file
       try {
         const data = await request.file?.(); // get the file
@@ -363,11 +370,49 @@ const chatPlugin: FastifyPluginAsync = async (fastify, options) => {
         const mimetype = data.mimetype; // get the mimetype
         const encoding = data.encoding; // get the encoding
         
+        // Get conversationId from query parameters
+        const { conversationId } = request.query as { conversationId?: string };
+        
+        if (!conversationId) {
+          return reply.status(400).send({
+            error: 'Bad Request',
+            message: 'conversationId is required as a query parameter'
+          });
+        }
+        
         const buffer = await getRawBody(data.file as any); // get the full file memory as buffer
 
         const {fileId, fileUrl} = await saveFileToStorage(buffer, filename, mimetype); // save the file to the storage service and get the file id and url
 
+        // Determine content type based on mimetype
+        let contentType: 'FILE' | 'IMAGE' = 'FILE';
+        if (mimetype.startsWith('image/')) {
+          contentType = 'IMAGE';
+        }
 
+        // Get user info
+        const userId = request.user?.userId;
+        const userRole = request.user?.role;
+
+        // Verify conversation exists and user has access
+        if (userId) { // if the user is authenticated
+          const isParticipant = await conversationService.isUserParticipant(conversationId, userId);
+          if (!isParticipant) { // if the user is not a participant in the conversation
+            return reply.status(403).send({
+              error: 'Forbidden', 
+              message: 'You are not a participant in this conversation'
+            });
+          }
+        }
+
+        // Save file to database as a message
+        const message = await messageService.createMessage({
+          conversationId: conversationId,
+          senderId: userId!,
+          senderRole: userRole as 'CUSTOMER' | 'AGENT',
+          contentType: contentType,
+          body: fileUrl // Store the file URL as the message body
+        });
 
         return reply.send({
           success: true,
@@ -378,7 +423,13 @@ const chatPlugin: FastifyPluginAsync = async (fastify, options) => {
             encoding,
             url: fileUrl,
             uploadedAt: new Date().toISOString(),
-            uploadedBy: request.user?.userId
+            uploadedBy: userId,
+            contentType,
+            message: {
+              id: message.id,
+              conversationId: message.conversationId,
+              createdAt: message.createdAt
+            }
           }
         });
       } catch (error) {
