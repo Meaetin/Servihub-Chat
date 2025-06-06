@@ -21,6 +21,6 @@ RUN npm run build
 # Expose the port that the app runs on
 EXPOSE 3001
 
-# Start the application
-CMD ["node", "dist/index.js"]
+# Start the application with database migration
+CMD ["sh", "-c", "echo '🔄 Running database migrations...' && npx prisma migrate deploy && echo '✅ Migrations complete!' && echo '🚀 Starting application...' && node dist/index.js"]
 

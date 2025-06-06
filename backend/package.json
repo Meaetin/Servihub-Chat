@@ -14,6 +14,7 @@
     "test:coverage": "jest --coverage",
     "test:chat-plugin": "ts-node src/test-chat-plugin.ts",
     "test:file-upload": "ts-node src/test-file-upload.ts",
+    "test:websocket": "ts-node src/tests/test-websocket.ts",
     "clean": "rm -rf dist",
     "prebuild": "npm run clean",
     "postbuild": "echo \"Build completed successfully\"",
@@ -42,7 +43,8 @@
     "jsonwebtoken": "^9.0.2",
     "prisma": "^6.8.2",
     "raw-body": "^3.0.0",
-    "redis": "^5.1.1"
+    "redis": "^5.1.1",
+    "ws": "^8.18.0"
   },
   "devDependencies": {
     "@types/jsonwebtoken": "^9.0.9",

@@ -15,6 +15,9 @@ import type { CreateUserDTO } from './services';
 // Import plugins
 import { chatPlugin } from './plugins';
 
+// Import WebSocket Manager
+import { webSocketManager } from './websocket/WebSocketManager';
+
 // Initialize Fastify
 const fastify = Fastify({
   logger: true
@@ -301,88 +304,25 @@ fastify.register(async function (fastify) {
   // ==================== WEBSOCKET ROUTES ====================
 
   // Authenticated WebSocket endpoint
-  fastify.get('/ws', { websocket: true }, (socket, request) => {
-    const auth = authenticateWebSocket(request); // Authenticate WebSocket
+  fastify.get('/ws', { websocket: true }, async (socket, request) => {
+    const user = webSocketManager.authenticateConnection(request);
     
-    if ('error' in auth) {
-      fastify.log.warn(`WebSocket authentication failed: ${auth.error}`);
-      socket.close(1008, auth.error);
+    if (!user) {
+      fastify.log.warn('WebSocket authentication failed');
+      socket.close(1008, 'Authentication failed');
       return;
     }
 
-    const user = auth.user; // Set user info from token
-    fastify.log.info(`WebSocket client connected: ${user.email} (${user.role})`);
-    
-    // Send welcome message with user info
-    socket.send(JSON.stringify({
-      type: 'welcome',
-      message: `Welcome ${user.email}!`,
-      user: {
-        userId: user.userId,
-        email: user.email,
-        role: user.role
-      }
-    }));
+    // Handle connection with the WebSocket manager
+    await webSocketManager.handleConnection(socket, user);
+  });
 
-    // Handle incoming messages
-    socket.on('message', async (message) => {
-      try {
-        const data = JSON.parse(message.toString());
-        fastify.log.info(`Message from ${user.email}:`, data);
-        
-        // Handle different message types
-        switch (data.type) {
-          case 'chat_message':
-            // Future: Use messageService to save and broadcast messages
-            if (data.conversationId && data.body) {
-              try {
-                const newMessage = await messageService.createMessage({
-                  conversationId: data.conversationId,
-                  senderId: user.userId,
-                  senderRole: user.role,
-                  contentType: data.contentType || 'TEXT',
-                  body: data.body
-                });
-                
-                // Broadcast to conversation participants
-                socket.send(JSON.stringify({
-                  type: 'message_sent',
-                  message: newMessage,
-                  timestamp: new Date().toISOString()
-                }));
-              } catch (error) {
-                socket.send(JSON.stringify({
-                  type: 'error',
-                  message: 'Failed to send message'
-                }));
-              }
-            }
-            break;
-          
-          default:
-            // Echo message back with user context
-            socket.send(JSON.stringify({
-              type: 'echo', 
-              message: data.message,
-              from: user.email,
-              timestamp: new Date().toISOString()
-            }));
-        }
-      } catch (error) {
-        socket.send(JSON.stringify({
-          type: 'error',
-          message: 'Invalid message format'
-        }));
-      }
-    });
-    
-    socket.on('close', () => {
-      fastify.log.info(`WebSocket client disconnected: ${user.email}`);
-    });
-
-    socket.on('error', (error) => {
-      fastify.log.error(`WebSocket error for ${user.email}:`, error);
-    });
+  // WebSocket stats endpoint
+  fastify.get('/ws/stats', {
+    preHandler: [authMiddleware]
+  }, async (request: AuthenticatedRequest, reply) => {
+    const stats = webSocketManager.getStats();
+    reply.send({ stats });
   });
 });
 
