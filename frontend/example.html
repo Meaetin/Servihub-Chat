@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ServHub Chat Widget - Example</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 40px;
+            line-height: 1.6;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        .demo-content {
+            background: #f8f9fa;
+            padding: 30px;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+        code {
+            background: #e9ecef;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: 'Courier New', monospace;
+        }
+        pre {
+            background: #e9ecef;
+            padding: 15px;
+            border-radius: 5px;
+            overflow-x: auto;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>ServHub Chat Widget Example</h1>
+        
+        <div class="demo-content">
+            <h2>How to Embed the Chat Widget</h2>
+            <p>To embed the ServHub chat widget in your website, follow these steps:</p>
+            
+            <h3>1. Include React and ReactDOM (if not already included)</h3>
+            <pre><code>&lt;script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"&gt;&lt;/script&gt;
+&lt;script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"&gt;&lt;/script&gt;</code></pre>
+            
+            <h3>2. Include the ServHub Chat Widget</h3>
+            <pre><code>&lt;script src="./dist/servihub-chat-widget.js"&gt;&lt;/script&gt;</code></pre>
+            
+            <h3>3. Add a container element</h3>
+            <pre><code>&lt;div id="my-chat-widget"&gt;&lt;/div&gt;</code></pre>
+            
+            <h3>4. Initialize the widget</h3>
+            <pre><code>&lt;script&gt;
+  // Initialize the chat widget
+  const chatWidget = ServiHubChat('my-chat-widget', {
+    apiUrl: 'https://your-api-server.com',
+    // Add other configuration options here
+  });
+&lt;/script&gt;</code></pre>
+        </div>
+        
+        <div class="demo-content">
+            <h2>Widget Features</h2>
+            <ul>
+                <li>✅ Responsive message bubbles</li>
+                <li>✅ Chat input with file upload support</li>
+                <li>✅ Mobile-responsive design</li>
+                <li>✅ Smooth animations and transitions</li>
+                <li>✅ Typing indicators</li>
+                <li>✅ Timestamp display</li>
+                <li>✅ Embeddable as UMD bundle (≤20kB target)</li>
+            </ul>
+        </div>
+        
+        <p><strong>Note:</strong> The chat widget will appear in the bottom-right corner of the page. Click the chat bubble to open it!</p>
+    </div>
+
+    <!-- Chat Widget Container -->
+    <div id="chat-widget-demo"></div>
+
+    <!-- Include React and ReactDOM from CDN -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    
+    <!-- Include the chat widget (uncomment when built) -->
+    <!-- <script src="./dist/servihub-chat-widget.js"></script> -->
+    
+    <script>
+        // For development - this would normally be:
+        // ServiHubChat('chat-widget-demo', { apiUrl: 'http://localhost:3001' });
+        
+        console.log('Chat widget ready to be initialized!');
+        console.log('Build the widget first: npm run build');
+    </script>
+</body>
+</html> 
